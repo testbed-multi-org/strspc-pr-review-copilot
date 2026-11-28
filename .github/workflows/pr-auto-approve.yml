@@ -220,7 +220,7 @@ jobs:
       #   SteerSpec/strspc-pr-review@<40-character SHA> # vX.Y.Z
       # and add a `github-actions` entry to .github/dependabot.yml so the pin is
       # bumped by PR rather than left to age.
-      - uses: SteerSpec/strspc-pr-review@dcf29012e1ce127e38137f7cc3a92cfc5038dcd7
+      - uses: SteerSpec/strspc-pr-review@a22d2079e5c8ab5a111015f4d2de2cea3c1f76d9
         with:
           # Required: GitHub login of the bot account that will approve PRs.
           # Keep this expression identical to the loop guard in the if: above.
