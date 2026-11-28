@@ -128,7 +128,12 @@ jobs:
       cancel-in-progress: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
     # Skip fork PRs and draft PRs. The fork guard is REQUIRED, not optional:
     # with pull_request_target the run would otherwise get your secrets while
-    # associated with a fork. Handle both pull_request_target and
+    # associated with a fork. Every PR branch below carries one: the head repo
+    # must be this repo (pull_request_target, pull_request_review, workflow_run)
+    # or, for check_run, the PR's head repo id must equal its base repo id.
+    # check_run.pull_requests is normally empty for a fork head, but the guard
+    # does not rely on that, and the action rejects a fork PR before approving
+    # too. Handle both pull_request_target and
     # pull_request_review (a Copilot review submission should
     # re-evaluate the PR), but guard the review path with actor != bot-login so
     # the bot's own APPROVE review never re-triggers this workflow (loop-guard).
@@ -193,7 +198,8 @@ jobs:
       ) || (
         github.event_name == 'check_run' &&
         github.event.check_run.name != 'auto-approve' &&
-        github.event.check_run.pull_requests[0] != null
+        github.event.check_run.pull_requests[0] != null &&
+        github.event.check_run.pull_requests[0].head.repo.id == github.event.check_run.pull_requests[0].base.repo.id
       ) || (
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion != 'skipped' &&
@@ -206,9 +212,15 @@ jobs:
         github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
       )
     steps:
-      # @v1 tracks the latest v1.x release. Pin an exact @vX.Y.Z if you prefer
-      # to upgrade manually.
-      - uses: SteerSpec/strspc-pr-review@85b94f8f21cb7c9cae12a204bd8e76c7aeed909d
+      # @v1 tracks the latest v1.x release, and this step hands the action a
+      # bot token that can approve PRs. No tag in strspc-pr-review is immutable:
+      # @v1 moves on every release by design, and nothing stops @vX.Y.Z moving
+      # either, so a moved tag runs new code with that token here. To review
+      # each upgrade, pin a commit SHA with its version in a comment instead,
+      #   SteerSpec/strspc-pr-review@<40-character SHA> # vX.Y.Z
+      # and add a `github-actions` entry to .github/dependabot.yml so the pin is
+      # bumped by PR rather than left to age.
+      - uses: SteerSpec/strspc-pr-review@ec9675113671b669a1b00530307ced9f95478be4
         with:
           # Required: GitHub login of the bot account that will approve PRs.
           # Keep this expression identical to the loop guard in the if: above.
